@@ -178,10 +178,11 @@ describe('useSWR - local mutation', () => {
 
     // hydration
     expect(container.textContent).toMatchInlineSnapshot(`"data: "`)
-
     //mount
     await screen.findByText('data: 0')
 
+    // wait for the next tick
+    await act(() => sleep(1))
     await act(() => {
       // mutate and revalidate
       return mutate(
@@ -190,9 +191,7 @@ describe('useSWR - local mutation', () => {
         false
       )
     })
-    await act(() => sleep(110))
-
-    expect(container.textContent).toMatchInlineSnapshot(`"data: 999"`)
+    await screen.findByText('data: 999')
   })
 
   it('should trigger on mutation without data', async () => {
@@ -455,12 +454,14 @@ describe('useSWR - local mutation', () => {
       }
     })
 
-    const [, , keyErr] = cache.serializeKey(key)
+    const [keyData, , keyErr] = cache.serializeKey(key)
     let cacheError = cache.get(keyErr)
     expect(cacheError.message).toMatchInlineSnapshot(`"${message}"`)
     expect(container.firstChild.textContent).toMatchInlineSnapshot(
       `"${message}"`
     )
+    // if mutate throws an error synchronously, the cache shouldn't be updated
+    expect(cache.get(keyData)).toBe(value)
     // if mutate succeed, error should be cleared
     await act(async () => {
       return mutate(key, value, false)
